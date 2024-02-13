@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-toast-plugin/1.3.2/jquery.toast.min.css" integrity="sha512-wJgJNTBBkLit7ymC6vvzM1EcSWeM9mmOu+1USHaRBbHkm6W9EgM0HY27+UtUaprntaYQJF75rc8gjxllKs5OIQ==" crossorigin="anonymous" />
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-toast-plugin/1.3.2/jquery.toast.min.js" integrity="sha512-zlWWyZq71UMApAjih4WkaRpikgY9Bz1oXIW5G0fED4vk14JjGlQ1UmkGM392jEULP8jbNMiwLWdM8Z87Hu88Fw==" crossorigin="anonymous"></script>
+
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+	<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+	<script src="https://xembook.github.io/nem2-browserify/symbol-sdk-pack-2.0.4.js"></script>
+
+	<script src="js/config.js"></script>
+	<script src="js/symapp.js"></script>
+
+<style>
+.jq-toast-wrap {
+    width:250px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+	<h1>9_transaction.html</h1>
+	<!-- button onclick="showModalAuthForLogin()">ログイン</button -->
+	<button onclick="showModalQR()">スキャン</button>
+	<br>
+	<b>Address QR</b>
+	<div id="signer_address"></div>
+	<div id="signer_address_plain"></div>
+	<button onclick="showModalAuthForKey()">鍵情報</button>
+</div>
+
+<!-- QRスキャンモーダル -->
+<div class="modal fade" id="modal_qr_scan" tabindex="-1" role="dialog">
+	<div class="modal-dialog" role="document"><div class="modal-content">
+
+		<div class="modal-header">
+			<h5 class="modal-title">QRスキャン</h5>
+			<button type="button" class="close" data-dismiss="modal" aria-label="閉じる"><span aria-hidden="true">&times;</span></button>
+		</div>
+
+		<div class="modal-body">
+			<canvas id="canvas_qr"  width="100%" hidden></canvas>
+			<div id="scan_data" class="text-break"></div>
+		</div>
+
+		<div class="modal-footer">
+			<button type="button" class="btn btn-default" data-dismiss="modal">キャンセル</button>
+			<button type="button" class="btn btn-primary" onclick="okModalQR()">送信</button>
+		</div><!-- /.modal-footer -->
+	</div></div><!-- /.modal-content --><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+
+<!-- 認証モーダル -->
+<div class="modal fade" id="modal_auth" tabindex="-1" role="dialog">
+<div class="modal-dialog" role="document"><div class="modal-content">
+
+	<div class="modal-header">
+		<h5 class="modal-title">認証</h5>
+		<button type="button" class="close" data-dismiss="modal" aria-label="閉じる"><span aria-hidden="true">&times;</span></button>
+	</div>
+
+	<div class="modal-body">
+		<div>
+			<label>パスワード</label>
+			<input type="password" id="modal_input_login_password">
+		</div>
+	</div>
+
+	<div class="modal-footer">
+		<button type="button" class="btn btn-primary" onclick="okModalAuth()">OK</button>
+		<button type="button" class="btn btn-default" data-dismiss="modal">キャンセル</button>
+	</div><!-- /.modal-footer -->
+</div></div><!-- /.modal-content --><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+
+<!-- アカウント選択モーダル -->
+<div class="modal fade" id="modal_account" tabindex="-1" role="dialog">
+<div class="modal-dialog" role="document"><div class="modal-content">
+
+	<div class="modal-header">
+		<h5 class="modal-title">アカウント作成</h5>
+		<button type="button" class="close" data-dismiss="modal" aria-label="閉じる"><span aria-hidden="true">&times;</span></button>
+	</div>
+	<div class="modal-body">
+		<div>
+
+			<label>パスワード設定<br></label>
+			<input type="password" id="modal_input_password">
+			<br>
+			<label>秘密鍵インポート</label>
+			<input type="password" id="modal_input_private_key" maxlength="64">
+			<label>(アカウント新規作成は未入力のまま「作成」クリック)</label>
+		</div>
+	</div>
+
+	<div class="modal-footer">
+		<button type="button" class="btn btn-primary" onclick="okModalAccount()">作成</button>
+		<button type="button" class="btn btn-default" data-dismiss="modal">キャンセル</button>
+	</div><!-- /.modal-footer -->
+</div></div><!-- /.modal-content --><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- 鍵表示モーダル -->
+<div class="modal fade" id="modal_key" tabindex="-1" role="dialog">
+<div class="modal-dialog" role="document"><div class="modal-content">
+	<div class="modal-header">
+		<h5 class="modal-title">鍵情報</h5>
+		<button type="button" class="close" data-dismiss="modal" aria-label="閉じる"><span aria-hidden="true">&times;</span></button>
+	</div>
+	<div class="modal-body">
+	<div>
+		<label>公開鍵</label>
+		<textarea class="form-control keyarea" id="modal_public_key" rows="2"></textarea>
+		<label>秘密鍵</label>
+		<textarea class="form-control keyarea" id="modal_private_key" rows="2"></textarea>
+	</div>
+	</div>
+	<div class="modal-footer">
+		<button type="button" class="btn btn-default" data-dismiss="modal">閉じる</button>
+	</div><!-- /.modal-footer -->
+</div></div><!-- /.modal-content --><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+
+<script>
+
+let encryptedSignerJSON;
+let signerRawAddress;
+let signerPublicAccount;
+let networkType;
+let currencyMosaicId;
+let generationHash;
+let epochAdjustment;
+let nodeUrl;
+
+const ITEM_NAME = "symbolseminar";
+const sym = require("/node_modules/symbol-sdk");
+const qr  = require("/node_modules/symbol-qr-library");
+
+const CONFIG_SYMBOL_APPLICATION = {
+	nodes:NODES,            //ノードリスト config.js内に記載
+	selectNodeCount:3,      //同期確認のために接続するノード数
+	timeout:1800,           //ノード接続待機時間 ミリ秒
+	heightDiffThreshold: 1, // 同期判断ブロック高差
+	retryCount:30,          //最大再接続回数
+	mainnet:"MAIN_NET",
+	testnet:"TEST_NET"
+};
+
+startSymbolApplication(
+
+	CONFIG_SYMBOL_APPLICATION,
+	
+	//onReady
+	async function(node){
+		console.log("select : " + node.url);
+		$.toast({heading: 'Select Node',text: node.url,showHideTransition: 'plain',icon: 'info',});
+
+		//ディープリンク
+		const params = new URLSearchParams(document.location.search.substring(1));
+		const reset = params.get("reset");
+
+		networkType = sym.NetworkType[CONFIG_SYMBOL_APPLICATION[node.network.identifier]];
+		nodeUrl = node.url;
+		generationHash = node.network.generationHashSeed;
+		epochAdjustment = node.network.epochAdjustment.slice(0,-1);
+		currencyMosaicId = node.network.currencyMosaicId.split("'").join("").slice(2);
+
+		if(localStorage.getItem(ITEM_NAME) == null|| reset === "true"){
+			$("#modal_account").modal("show");
+		}else{
+			authMode = "login";
+			$("#modal_auth").modal("show");
+		}
+
+//8_accountではコメントアウト
+//		setSocket(node.socket);
+
+	},
+
+	// onStatusChange 状態変更通知
+	async function(event){
+		console.log(event.name + " : " + event.error + " : " + event.targetNode);
+	},
+
+	// onPhysicalMessage QR受信時
+	async function(event){
+
+		console.log(event);
+		console.log(event.data.address.address);
+		$.toast({heading: 'Scan',text:event ,showHideTransition: 'plain',icon: 'info',});
+
+		const scanData = document.getElementById('scan_data');
+		scanData.textContent = event.data.address.address;
+
+//		$('#modal_qr_scan').modal('hide');
+	},
+
+	//onSocketMessage ソケット受信時
+	async function(event){
+		if(event.topic === "block"){
+			console.log("new block : " + event.data.block.height);
+			$.toast({heading: 'New Block',text:  event.data.block.height ,showHideTransition: 'plain',icon: 'info',});
+		}else if(event.topic.includes("unconfirmedAdded/"  )){
+
+			$.toast({heading: 'Information',text:  '未承認トランザクション検知' ,showHideTransition: 'plain',icon: 'info',});
+		}else if(event.topic.includes("confirmedAdded/"  )){
+
+			$.toast({heading: 'Success',text:  'トランザクション承認' ,showHideTransition: 'plain',icon: 'success',});
+		}
+	},
+
+	//onSocketResumed ソケット接続回復時
+	async function(nodeSocket){
+		setSocket(nodeSocket);
+	},
+
+	async function(){/* onVisible 画面フォーカス回復時     */}
+);
+
+function setSocket(nodeSocket){
+	socketSend(nodeSocket,'block');
+
+	if(signerRawAddress){
+		socketSend(nodeSocket,'status/'   + signerRawAddress);
+		socketSend(nodeSocket,'confirmedAdded/'   + signerRawAddress);
+		socketSend(nodeSocket,'unconfirmedAdded/' + signerRawAddress);
+	}
+}
+
+async function okModalAccount(){
+
+	const pw =  document.getElementById('modal_input_password');
+	const pk  = document.getElementById('modal_input_private_key');
+
+	let signerAccount;
+	if(pk.value == ''){
+		signerAccount = sym.Account.generateNewAccount(networkType);
+	}else{
+		try{
+			signerAccount = sym.Account.createFromPrivateKey(pk.value,networkType);
+		}catch(err){
+			alert("秘密鍵が正しく入力されていません。");
+			return;
+		}
+	}
+
+	$("#modal_account").modal("hide");
+
+	signerPublicAccount = signerAccount.publicAccount;
+	const signerQR = qr.QRCodeGenerator.createExportAccount(signerAccount.privateKey, networkType, null,pw.value); //passには認証したアカウントから
+
+	encryptedSignerJSON = signerQR.toJSON();
+
+	if(localStorage.getItem(ITEM_NAME)){
+		if(window.confirm("保存している鍵情報を更新しますか？")){
+			localStorage.setItem(ITEM_NAME,encryptedSignerJSON);
+		}else{
+			alert("インポート（新規作成）した鍵を保存せずにツールを使用します。ブラウザを閉じると消去されます。");
+		}
+	}else{
+		localStorage.setItem(ITEM_NAME,encryptedSignerJSON);
+	}
+	delete signerAccount;
+	delete signerQR;
+	delete pw;
+	delete pk;
+
+	settingSignerAccount(signerPublicAccount);
+}
+
+//アカウント情報の設定
+async function settingSignerAccount(publicAccount){
+
+	const signerAddress       = document.getElementById('signer_address');
+	const signerAddressPlain  = document.getElementById('signer_address_plain');
+
+	signerRawAddress = publicAccount.address.plain();
+	const addressQR = new qr.AddressQR("",publicAccount.address);
+	addressQR.toBase64().subscribe(x => {
+		(tag= document.createElement('img')).src = x;
+		signerAddress.appendChild(tag);
+	});
+
+	signerAddressPlain.textContent = publicAccount.address.plain();
+	setSocket(currentWebsocket);
+}
+
+function okModalQR(){
+	$("#modal_qr_scan").modal("hide");
+	$("#modal_auth").modal("show");
+	authMode = "transaction";
+
+}
+
+async function okModalAuth(){
+
+	const pw = document.getElementById('modal_input_login_password');
+	let signerQR;
+	try{
+		signerQR = qr.AccountQR.fromJSON(localStorage.getItem(ITEM_NAME),pw.value);
+	}catch(err){
+		alert("パスワードが正しくありません。");
+		return;
+	}
+
+	const signerAccount = sym.Account.createFromPrivateKey(signerQR.accountPrivateKey,networkType);
+	signerPublicAccount = signerAccount.publicAccount;
+
+	$("#modal_auth").modal("hide");
+
+	if(authMode === "login"){
+		console.log(pw.value);
+		settingSignerAccount(signerPublicAccount);
+	}else if(authMode === "key"){
+
+		document.getElementById("modal_public_key").textContent = signerAccount.publicKey;
+		document.getElementById("modal_private_key").textContent = signerAccount.privateKey;
+
+		$("#modal_key").modal("show");	
+
+	}else if(authMode === "transaction"){
+
+		const scanData = document.getElementById('scan_data');
+
+		const recepientAddress = sym.Address.createFromRawAddress(scanData.textContent);
+
+		const tx = sym.TransferTransaction.create(
+			sym.Deadline.create(epochAdjustment),
+			recepientAddress,  //送信先アドレス
+			[ 
+			  new sym.Mosaic(
+			    new sym.MosaicId(currencyMosaicId), 
+			    sym.UInt64.fromUint(1000000) //1XYM(divisibility:6)
+			  )
+			],
+			sym.PlainMessage.create("Hello Symbol Seminar"),
+			networkType
+		).setMaxFee(100);
+
+		const signeTx = signerAccount.sign(tx, generationHash);
+		nodeFetch(nodeUrl + "/transactions","PUT",{"payload": signeTx.payload});
+		clog(nodeUrl,signeTx);	
+	}else{
+
+	}
+	pw.value = "";
+	delete pw;
+	delete signerQR;
+}
+
+let authMode;
+function showModalAuthForLogin(){
+	$("#modal_auth").modal("show");
+	authMode = "login";
+}
+
+function showModalAuthForKey(){
+	$("#modal_auth").modal("show");
+	authMode = "key";
+}
+
+function showModalQR(){
+	$("#modal_qr_scan").modal("show");
+	startVideo("canvas_qr");
+}
+
+$('#modal_qr_scan').on('hide.bs.modal', function (e) {
+	stopVideo();		
+	clearRect();
+});
+
+</script>
+</body>
+</html>

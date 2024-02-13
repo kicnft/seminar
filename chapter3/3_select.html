@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<script src="js/config.js"></script>
+	<script src="js/symapp.js"></script>
+</head>
+
+<body>
+	<h1>3_connect.html</h1>
+
+<script>
+
+const CONFIG_SYMBOL_APPLICATION = {
+	nodes:NODES,            //ノードリスト config.js内に記載
+	selectNodeCount:3,      //同期確認のために接続するノード数
+	timeout:1800,           //ノード接続待機時間 ミリ秒
+	heightDiffThreshold: 1, // 同期判断ブロック高差
+	retryCount:30,          //最大再接続回数
+	mainnet:"MAIN_NET",
+	testnet:"TEST_NET"
+};
+
+startSymbolApplication(
+
+	CONFIG_SYMBOL_APPLICATION,
+	
+	// onReady
+	async function(node){
+		console.log("select : " + node.url);
+	},
+
+	// onStatusChange 状態変更通知
+	async function(event){
+		console.log(event.name + " : " + event.error + " : " + event.targetNode);
+	},
+	async function(event     ){/* onPhysicalMessage QR受信時         */},
+	async function(event     ){/* onSocketMessage ソケット受信時     */},
+	async function(nodeSocket){/* onSocketResumed ソケット接続回復時 */},
+	async function(          ){/* onVisible 画面フォーカス回復時     */}
+);
+</script>
+</body>
+</html>

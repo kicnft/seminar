@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-toast-plugin/1.3.2/jquery.toast.min.css" integrity="sha512-wJgJNTBBkLit7ymC6vvzM1EcSWeM9mmOu+1USHaRBbHkm6W9EgM0HY27+UtUaprntaYQJF75rc8gjxllKs5OIQ==" crossorigin="anonymous" />
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-toast-plugin/1.3.2/jquery.toast.min.js" integrity="sha512-zlWWyZq71UMApAjih4WkaRpikgY9Bz1oXIW5G0fED4vk14JjGlQ1UmkGM392jEULP8jbNMiwLWdM8Z87Hu88Fw==" crossorigin="anonymous"></script>
+
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+	<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+	<script src="js/config.js"></script>
+	<script src="js/symapp.js"></script>
+
+<style>
+.jq-toast-wrap {
+    width:250px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+	<h1>7_qr.html</h1>
+	<button onclick="showModalAuthForLogin()">ログイン</button>
+	<button onclick="showModalQR()">スキャン</button>
+</div>
+
+<!-- QRスキャンモーダル -->
+<div class="modal fade" id="modal_qr_scan" tabindex="-1" role="dialog">
+	<div class="modal-dialog" role="document"><div class="modal-content">
+
+		<div class="modal-header">
+			<h5 class="modal-title">QRスキャン</h5>
+			<button type="button" class="close" data-dismiss="modal" aria-label="閉じる"><span aria-hidden="true">&times;</span></button>
+		</div>
+
+		<div class="modal-body">
+			<label></label>
+			<canvas id="canvas_qr"  width="100%" hidden></canvas>
+			<div id="scan_data" class="text-break"></div>
+		</div>
+
+		<div class="modal-footer">
+			<button type="button" class="btn btn-default" data-dismiss="modal">キャンセル</button>
+			<button type="button" class="btn btn-primary" onclick="okModalQR()">OK</button>
+		</div><!-- /.modal-footer -->
+	</div></div><!-- /.modal-content --><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+
+<!-- 認証モーダル -->
+<div class="modal fade" id="modal_auth" tabindex="-1" role="dialog">
+<div class="modal-dialog" role="document"><div class="modal-content">
+
+	<div class="modal-header">
+		<h5 class="modal-title">認証</h5>
+		<button type="button" class="close" data-dismiss="modal" aria-label="閉じる"><span aria-hidden="true">&times;</span></button>
+	</div>
+
+	<div class="modal-body">
+		<div>
+			<label>パスワード</label>
+			<input type="password" id="modal_input_login_password">
+		</div>
+	</div>
+
+	<div class="modal-footer">
+		<button type="button" class="btn btn-primary" onclick="okModalAuth()">OK</button>
+		<button type="button" class="btn btn-default" data-dismiss="modal">キャンセル</button>
+	</div><!-- /.modal-footer -->
+</div></div><!-- /.modal-content --><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<script>
+
+const CONFIG_SYMBOL_APPLICATION = {
+	nodes:NODES,            //ノードリスト config.js内に記載
+	selectNodeCount:3,      //同期確認のために接続するノード数
+	timeout:1800,           //ノード接続待機時間 ミリ秒
+	heightDiffThreshold: 1, // 同期判断ブロック高差
+	retryCount:30,          //最大再接続回数
+	mainnet:"MAIN_NET",
+	testnet:"TEST_NET"
+};
+
+startSymbolApplication(
+
+	CONFIG_SYMBOL_APPLICATION,
+	
+	//onReady
+	async function(node){
+		console.log("select : " + node.url);
+		$.toast({heading: 'Select Node',text: node.url,showHideTransition: 'plain',icon: 'info',});
+
+		setSocket(node.socket);
+
+	},
+
+	// onStatusChange 状態変更通知
+	async function(event){
+		console.log(event.name + " : " + event.error + " : " + event.targetNode);
+	},
+
+	// onPhysicalMessage QR受信時
+	async function(event){
+
+		console.log(event);
+		$.toast({heading: 'Scan',text:event ,showHideTransition: 'plain',icon: 'info',});
+
+		$('#modal_qr_scan').modal('hide');
+	},
+
+	//onSocketMessage ソケット受信時
+	async function(event){
+		if(event.topic === "block"){
+			console.log("new block : " + event.data.block.height);
+			$.toast({heading: 'New Block',text:  event.data.block.height ,showHideTransition: 'plain',icon: 'info',});
+		}
+	},
+
+	//onSocketResumed ソケット接続回復時
+	async function(nodeSocket){
+		setSocket(nodeSocket);
+	},
+
+	async function(){/* onVisible 画面フォーカス回復時     */}
+);
+
+function setSocket(nodeSocket){
+	socketSend(nodeSocket,'block');
+}
+
+async function okModalAuth(){
+
+	const pw = document.getElementById('modal_input_login_password');
+
+	$("#modal_auth").modal("hide");
+
+	if(authMode === "login"){
+		console.log(pw.value);
+	}else{
+
+	}
+	pw.value = "";
+	delete pw;
+}
+
+let authMode;
+function showModalAuthForLogin(){
+	$("#modal_auth").modal("show");
+	authMode = "login";
+}
+
+function showModalQR(){
+	$("#modal_qr_scan").modal("show");
+	startVideo("canvas_qr");
+}
+
+$('#modal_qr_scan').on('hide.bs.modal', function (e) {
+	stopVideo();
+	clearRect();
+});
+
+</script>
+</body>
+</html>
