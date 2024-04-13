@@ -1,4 +1,4 @@
-
+/* ver 1.0.0 2024/04/14 */ 
 let onSocketResumed;
 let onSocketMessage;
 let onPhysicalMessage;
@@ -30,6 +30,7 @@ async function startSymbolApplication(config,onReady,cb1,cb2,cb3,cb4,cb5){
 	onReady(selectedNode);
 }
 
+//スリープ回復時制御
 document.addEventListener("visibilitychange", async function() {
 	if (document.visibilityState === 'visible') {
 		const readyState = currentWebsocket.socket.readyState;
@@ -123,18 +124,13 @@ function nodeFetch(nodeUrl, method = 'GET', data = null) {
 
 	const requestOptions = {
 		method,
-		headers: {
-			'Content-Type': 'application/json' // リクエストヘッダーに適切なContent-Typeを指定します
-		},
 		signal: controller.signal
 	};
-/*
-	const requestOptions = {
-		method,
-		signal: controller.signal
-	};
-*/
+
 	if (method === 'POST' || method === 'PUT') {
+		requestOptions.headers = {
+			'Content-Type': 'application/json' // リクエストヘッダーに適切なContent-Typeを指定します
+		};
 		requestOptions.body = JSON.stringify(data); // リクエストボディにデータを含める場合は適切なデータ形式に変換する必要があります
 	}
 
@@ -150,7 +146,7 @@ function nodeFetch(nodeUrl, method = 'GET', data = null) {
 		if (error.name === "AbortError") {
 			throw new Error("Timeout");
 		}
-		throw error;
+		throw new Error("Other Error");
 	});
 }
 
@@ -217,7 +213,6 @@ function connectWebSocket(targetNode) {
 		socket.onerror = function () {
 			isSocketFailed = true;
 			reject(new Error("Failed to connect to the WebSocket"));
-
 		};
 
 		socket.onclose = async function () {
@@ -289,8 +284,6 @@ function paddingDate0(num) {
 };
 
 //QRコードスキャン関連///////////////////////////////////
-
-
 var canvasElement;
 var canvas;
 
@@ -353,7 +346,6 @@ function startVideo(id){
 		video.srcObject = stream;
 		window.localStream = stream;
 		video.setAttribute("playsinline", true);
-		//video.play();
 		video.onloadedmetadata = function() {
 			video.play(); // メタデータのロードが完了した後に再生を開始
 		};
@@ -366,8 +358,6 @@ function startVideo(id){
 		}
 		onStatusChange(event);
 	});
-
-
 }
 
 function stopVideo(){
@@ -430,13 +420,10 @@ function createFile(tree, id,text,parent){
 
 async function buildTree(tree,accountNames,signer,signedCosigners){
 
-//	const accountAddresses = tree.map(t=>t.multisigEntries).flat().map(fm=>sym.Address.createFromEncoded(fm.multisig.accountAddress).plain());
-
 	const jstree = new Array();
 	for(var level of tree){
 		for(var entry of level.multisigEntries){
 			
-//			const accountNames = await nodeFetchAccountNames(entry.multisig.multisigAddresses.map(ma=>sym.Address.createFromEncoded(ma).plain()));
 			if(entry.multisig.multisigAddresses.length > 0){
 				for(var address of entry.multisig.multisigAddresses){
 
@@ -457,8 +444,6 @@ async function createChildNode(multisig,parent,accountNames,signer,signedCosigne
 	const child = new Object();
 	const address = sym.Address.createFromEncoded(multisig.accountAddress);
 	const accountName = accountNames.find(an=>an.address === multisig.accountAddress).names[0];
-//	const names = await nodeFetchAccountNames([address.plain()]);
-//		child.text = address.pretty().slice( 0, 13 ) + "..." +	address.pretty().slice( -3 );
 	if(accountName){
 		child.text = accountName;
 	}else{
@@ -471,7 +456,6 @@ async function createChildNode(multisig,parent,accountNames,signer,signedCosigne
 
 	if(signedCosigners !== undefined && signedCosigners.some(sf=>sf === sym.Address.createFromEncoded(multisig.accountAddress).plain())){
 		child.text = "【連署済】" + child.text;
-
 	}
 	child.id = multisig.accountAddress;
 	child.parent = parent ;
@@ -499,8 +483,6 @@ async function nodeFetchNamespaces(namespaceId){
 	const res = await nodeFetch(nodeUrl + "/namespaces/" + namespaceId);
 	return JSON.parse(res).namespace;
 }
-
-
 ////////////////////////////////////////////////////////
 
 async function getMosaicAsset(itemId){
@@ -508,9 +490,7 @@ async function getMosaicAsset(itemId){
 	var mosaicId;
 	if(itemId.constructor.name === "NamespaceId"){
 		mosaicId = await nsRepo.getLinkedMosaicId(itemId).toPromise();
-
 	}else{
-
 		mosaicId = itemId;
 	}
 
